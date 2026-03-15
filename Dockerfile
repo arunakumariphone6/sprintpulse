@@ -15,6 +15,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY logo.png .
+COPY atlassian-connect.json .
+COPY app-icon-512.png .
 
 RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
