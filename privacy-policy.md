@@ -83,7 +83,9 @@ This App uses the Atlassian Jira REST API in accordance with [Atlassian's Develo
 For privacy-related questions or data deletion requests, contact:
 
 **Arunakumar Tavva**
-Email: *(your contact email — add before publishing)*
+Website: https://sprintpulse.dev
+App: https://sprintpulse-production.up.railway.app
+Email: arunakumariphone6@gmail.com
 
 ---
 

@@ -2,10 +2,10 @@
   "name": "SprintPulse for Jira",
   "description": "Real-time Jira live dashboard with sprint KPIs, team productivity analytics, People Intelligence leaderboard, and CEO-grade reporting. Connect once — share with your entire team.",
   "key": "com.arunakumartavva.sprintpulse",
-  "baseUrl": "https://YOUR-DEPLOYMENT-URL",
+  "baseUrl": "https://sprintpulse-production.up.railway.app",
   "vendor": {
     "name": "Arunakumar Tavva",
-    "url": "https://sprintpulse.io"
+    "url": "https://sprintpulse.dev"
   },
   "version": "2.0",
   "apiMigrations": {
@@ -51,7 +51,7 @@
   },
   "enableLicensing": false,
   "links": {
-    "self": "https://YOUR-DEPLOYMENT-URL/atlassian-connect.json",
-    "homepage": "https://YOUR-DEPLOYMENT-URL"
+    "self": "https://sprintpulse-production.up.railway.app/atlassian-connect.json",
+    "homepage": "https://sprintpulse-production.up.railway.app"
   }
 }
