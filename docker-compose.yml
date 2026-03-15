@@ -1,0 +1,23 @@
+services:
+  dashboard:
+    build: .
+    container_name: jira-intelligence-dashboard
+    ports:
+      - "8085:8080"
+    env_file:
+      - .env              # optional: pre-fill Jira credentials
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-jira-intelligence-dashboard-secret-2026-change-me}
+      - JIRA_URL=${JIRA_URL:-}
+      - JIRA_EMAIL=${JIRA_EMAIL:-}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN:-}
+      - JIRA_PROJECTS=${JIRA_PROJECTS:-}
+      - JIRA_MAX_RESULTS=${JIRA_MAX_RESULTS:-500}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/status')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

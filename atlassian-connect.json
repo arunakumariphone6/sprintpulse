@@ -1,0 +1,57 @@
+{
+  "name": "SprintPulse for Jira",
+  "description": "Real-time Jira live dashboard with sprint KPIs, team productivity analytics, People Intelligence leaderboard, and CEO-grade reporting. Connect once — share with your entire team.",
+  "key": "com.arunakumartavva.sprintpulse",
+  "baseUrl": "https://YOUR-DEPLOYMENT-URL",
+  "vendor": {
+    "name": "Arunakumar Tavva",
+    "url": "https://sprintpulse.io"
+  },
+  "version": "2.0",
+  "apiMigrations": {
+    "context-qsh": true,
+    "signed-install": true
+  },
+  "authentication": {
+    "type": "none"
+  },
+  "lifecycle": {
+    "installed": "/atlassian/installed",
+    "uninstalled": "/atlassian/uninstalled"
+  },
+  "scopes": [
+    "READ"
+  ],
+  "modules": {
+    "generalPages": [
+      {
+        "key": "sprintpulse-dashboard-page",
+        "name": {
+          "value": "SprintPulse Dashboard"
+        },
+        "url": "/dashboard",
+        "location": "system.top.navigation.bar",
+        "weight": 200,
+        "icon": {
+          "width": 24,
+          "height": 24,
+          "url": "/app-icon-512.png"
+        }
+      },
+      {
+        "key": "sprintpulse-people-page",
+        "name": {
+          "value": "People Intelligence"
+        },
+        "url": "/people",
+        "location": "system.top.navigation.bar",
+        "weight": 201
+      }
+    ]
+  },
+  "enableLicensing": false,
+  "links": {
+    "self": "https://YOUR-DEPLOYMENT-URL/atlassian-connect.json",
+    "homepage": "https://YOUR-DEPLOYMENT-URL"
+  }
+}

@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────────
+#  SprintPulse for Jira — Git Ignore
+#  NEVER commit credentials or build artifacts
+# ─────────────────────────────────────────────────────────
+
+# Credentials — NEVER commit this
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.override.yml
