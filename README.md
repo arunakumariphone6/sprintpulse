@@ -1,3 +1,5 @@
+#⭐ If this saved you time, please star the repo — it helps others find it!
+[![GitHub stars](https://img.shields.io/github/stars/arunakumariphone6/sprintpulse?style=social)](https://github.com/arunakumariphone6/sprintpulse)
 # Jira Intelligence Dashboard
 
 **Author:** Arunakumar Tavva
