@@ -2330,6 +2330,88 @@ def atlassian_uninstalled():
     return "", 204
 
 
+@app.route("/privacy")
+def privacy_policy():
+    """Serve the Privacy Policy page."""
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — SprintPulse for Jira</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 24px; color: #172B4D; line-height: 1.7; }
+  h1 { color: #0052CC; border-bottom: 2px solid #0052CC; padding-bottom: 12px; }
+  h2 { color: #0052CC; margin-top: 32px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { border: 1px solid #DFE1E6; padding: 10px 14px; text-align: left; }
+  th { background: #F4F5F7; font-weight: 600; }
+  a { color: #0052CC; }
+  .meta { color: #6B778C; font-size: 0.9em; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #DFE1E6; color: #6B778C; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<h1>Privacy Policy — SprintPulse for Jira</h1>
+<p class="meta"><strong>Author / Data Controller:</strong> Arunakumar Tavva<br>
+<strong>Effective Date:</strong> 14 March 2026 &nbsp;|&nbsp; <strong>Last Updated:</strong> 14 March 2026</p>
+
+<h2>1. Overview</h2>
+<p>SprintPulse for Jira ("the App") is a self-hosted web application that connects to your Atlassian Jira instance via the Jira REST API. This Privacy Policy explains what data is accessed, how it is used, and the responsibilities of the person deploying and using the App.</p>
+
+<h2>2. Data Accessed</h2>
+<table>
+<tr><th>Data Type</th><th>Purpose</th></tr>
+<tr><td>Jira issue metadata (summary, status, type, priority, assignee, reporter, labels, sprint, story points, dates)</td><td>Display on dashboard, KPI calculations</td></tr>
+<tr><td>Jira project keys and names</td><td>Project-level filtering and grouping</td></tr>
+<tr><td>Jira user display names</td><td>Assignee / reporter identification on dashboard</td></tr>
+</table>
+<p>The App uses <strong>read-only</strong> Jira API scopes (<code>READ</code>). It does <strong>not</strong> create, modify, or delete any Jira data.</p>
+
+<h2>3. Data Storage</h2>
+<ul>
+<li><strong>No external database.</strong> All Jira data is held in server memory only during the running session.</li>
+<li><strong>No data is persisted</strong> to disk beyond the <code>.env</code> file (which stores your Jira credentials locally).</li>
+<li><strong>No data is sent</strong> to any third-party service, analytics platform, or external server.</li>
+<li>When the Docker container is stopped, all cached data is permanently cleared from memory.</li>
+</ul>
+
+<h2>4. Credentials Handling</h2>
+<ul>
+<li>Your Jira email address and API token are stored in your local <code>.env</code> file, excluded from Docker images via <code>.dockerignore</code>.</li>
+<li>Credentials are transmitted over HTTPS to Atlassian's API endpoints only.</li>
+<li>Credentials are <strong>never logged</strong>, displayed in the browser, or sent to any party other than Atlassian's own API servers.</li>
+</ul>
+
+<h2>5. Cookies and Sessions</h2>
+<p>The App uses a single server-side Flask session cookie to maintain your connection configuration within your browser session. No persistent tracking cookies, third-party cookies, or analytics cookies are used.</p>
+
+<h2>6. Third-Party Services</h2>
+<p>The App loads fonts from Google Fonts CDN for visual display purposes only. No Jira data is transmitted to Google Fonts.</p>
+
+<h2>7. Data Sharing</h2>
+<p>The App does not share, sell, rent, or otherwise transmit any Jira data or personal information to any third party. All data processing occurs within your own infrastructure.</p>
+
+<h2>8. Self-Hosted Deployment</h2>
+<p>Because the App is self-hosted, <strong>you</strong> (the deploying organisation or individual) are the data controller. You are responsible for securing the server, network access, TLS certificates, and access controls.</p>
+
+<h2>9. Atlassian API Usage</h2>
+<p>This App uses the Atlassian Jira REST API in accordance with <a href="https://developer.atlassian.com/platform/marketplace/atlassian-developer-terms/">Atlassian's Developer Terms of Service</a> and the <a href="https://developer.atlassian.com/platform/marketplace/atlassian-marketplace-vendor-agreement/">Atlassian Marketplace Partner Agreement</a>.</p>
+
+<h2>10. Contact</h2>
+<p>For privacy-related questions or data deletion requests, contact:<br>
+<strong>Arunakumar Tavva</strong><br>
+Email: <a href="mailto:support@sprintpulse.dev">support@sprintpulse.dev</a><br>
+Website: <a href="https://sprintpulse.dev">https://sprintpulse.dev</a></p>
+
+<h2>11. Changes to This Policy</h2>
+<p>This policy may be updated to reflect changes in the App or legal requirements. The "Last Updated" date at the top will be revised accordingly.</p>
+
+<footer>&copy; 2026 Arunakumar Tavva. All rights reserved.</footer>
+</body>
+</html>"""
+
+
 if __name__ == "__main__":
     print("\n" + "="*60)
     print("  🚀  SprintPulse for Jira — by Arunakumar Tavva")
