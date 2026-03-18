@@ -2412,6 +2412,116 @@ Website: <a href="https://sprintpulse.dev">https://sprintpulse.dev</a></p>
 </html>"""
 
 
+@app.route("/security")
+def security_policy():
+    """Serve the Security Policy page."""
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Policy — SprintPulse for Jira</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 24px; color: #172B4D; line-height: 1.7; }
+  h1 { color: #0052CC; border-bottom: 2px solid #0052CC; padding-bottom: 12px; }
+  h2 { color: #0052CC; margin-top: 32px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  .meta { color: #6B778C; font-size: 0.9em; }
+  a { color: #0052CC; }
+  .highlight { background: #F4F5F7; border-left: 4px solid #0052CC; padding: 12px 16px; margin: 16px 0; border-radius: 0 4px 4px 0; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #DFE1E6; color: #6B778C; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<h1>Security Policy — SprintPulse for Jira</h1>
+<p class="meta"><strong>Vendor:</strong> Arunakumar Tavva &nbsp;|&nbsp;
+<strong>Effective Date:</strong> 14 March 2026 &nbsp;|&nbsp;
+<strong>Last Updated:</strong> 14 March 2026</p>
+
+<div class="highlight">
+  SprintPulse for Jira is a self-hosted application. The customer deploys and operates it within their own infrastructure. This policy describes the security controls, practices, and incident response procedures maintained by the vendor.
+</div>
+
+<h2>1. Application Security</h2>
+<ul>
+  <li>The app is built with Python/Flask and uses only well-maintained, minimal dependencies (Flask, Gunicorn, Requests).</li>
+  <li>All dependencies are pinned in <code>requirements.txt</code> and reviewed for known vulnerabilities before each release.</li>
+  <li>The app uses read-only Jira API access (<code>READ</code> scope only) — it cannot create, modify, or delete any Jira data.</li>
+  <li>No user passwords are stored by the application. Jira API tokens are held in the customer's own <code>.env</code> file, never transmitted to the vendor.</li>
+  <li>Session data is managed using Flask's server-side session with a configurable <code>SECRET_KEY</code>.</li>
+  <li>All Jira API communications are made over HTTPS to Atlassian's endpoints only.</li>
+  <li>The application has been reviewed against the <a href="https://owasp.org/www-project-top-ten/">OWASP Top 10</a> security risks.</li>
+</ul>
+
+<h2>2. Infrastructure Security</h2>
+<ul>
+  <li>The vendor's production deployment (sprintpulse.dev) is hosted on Railway, which provides encrypted storage, automatic HTTPS/TLS, and infrastructure-level security.</li>
+  <li>All traffic to sprintpulse.dev is served over HTTPS (TLS 1.2+).</li>
+  <li>The Docker image is built from the official Python base image and kept up to date.</li>
+  <li>The <code>.env</code> file containing credentials is excluded from Docker images via <code>.dockerignore</code> and from source control via <code>.gitignore</code>.</li>
+</ul>
+
+<h2>3. Access Control and Authentication</h2>
+<ul>
+  <li>Source code is hosted on GitHub with access restricted to the vendor only.</li>
+  <li>Multi-factor authentication (MFA) is enabled on the GitHub account used for development.</li>
+  <li>The vendor's Atlassian Marketplace account is protected with MFA.</li>
+  <li>Strong, unique passwords are used for all vendor systems.</li>
+</ul>
+
+<h2>4. Vulnerability Management</h2>
+<ul>
+  <li>The vendor monitors dependencies for known CVEs and applies patches promptly.</li>
+  <li>Critical security vulnerabilities will be patched within 14 days of discovery, in accordance with the <a href="https://developer.atlassian.com/platform/marketplace/security-bugfix-policy/">Atlassian Marketplace Security Bug Fix Policy</a>.</li>
+  <li>Dependency scanning (SCA) is performed on open-source libraries used in the application.</li>
+</ul>
+
+<h2>5. Incident Response</h2>
+<ul>
+  <li>In the event of a confirmed security incident or critical vulnerability, affected customers and Atlassian will be notified within 72 hours.</li>
+  <li>Notifications will be sent via the security contact email and posted on the Marketplace listing.</li>
+  <li>The vendor follows <a href="https://developer.atlassian.com/platform/marketplace/app-security-incident-management-guidelines/">Atlassian's Security Incident Management Guidelines</a>.</li>
+  <li>A fix or mitigation will be provided as quickly as possible, with a target of 14 days for critical issues.</li>
+</ul>
+
+<h2>6. Vulnerability Reporting</h2>
+<ul>
+  <li>To report a security vulnerability, contact: <a href="mailto:support@sprintpulse.dev">support@sprintpulse.dev</a></li>
+  <li>Please include a description of the vulnerability, steps to reproduce, and potential impact.</li>
+  <li>The vendor commits to acknowledging all valid security reports within 5 business days.</li>
+  <li>Responsible disclosure is appreciated — please allow the vendor reasonable time to address the issue before public disclosure.</li>
+</ul>
+
+<h2>7. Customer Responsibilities</h2>
+<p>Because SprintPulse for Jira is self-hosted, customers are responsible for:</p>
+<ul>
+  <li>Securing their own server, network, and access controls</li>
+  <li>Keeping their Docker host and OS patched and up to date</li>
+  <li>Setting a strong, unique <code>SECRET_KEY</code> in their <code>.env</code> file</li>
+  <li>Restricting access to the dashboard port (8085) to authorised users only</li>
+  <li>Rotating their Jira API token periodically</li>
+</ul>
+
+<h2>8. Data Security</h2>
+<ul>
+  <li>No customer Jira data is stored or processed by the vendor.</li>
+  <li>All data processing occurs entirely within the customer's own deployment.</li>
+  <li>The vendor has no access to customer Jira instances or data at any time.</li>
+</ul>
+
+<h2>9. Security Contact</h2>
+<p>For all security-related enquiries, vulnerability reports, or incident notifications:<br>
+<strong>Email:</strong> <a href="mailto:support@sprintpulse.dev">support@sprintpulse.dev</a><br>
+<strong>Vendor:</strong> Arunakumar Tavva<br>
+<strong>Website:</strong> <a href="https://sprintpulse.dev">https://sprintpulse.dev</a></p>
+
+<footer>&copy; 2026 Arunakumar Tavva. All rights reserved. &nbsp;|&nbsp;
+<a href="/privacy">Privacy Policy</a></footer>
+</body>
+</html>"""
+
+
 if __name__ == "__main__":
     print("\n" + "="*60)
     print("  🚀  SprintPulse for Jira — by Arunakumar Tavva")
