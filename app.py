@@ -671,7 +671,7 @@ input[type=password]{font-family:'JetBrains Mono',monospace;letter-spacing:2px}
 <div class="card">
   <img src="{{ logo_src }}" alt="Jira Intelligence Dashboard" class="logo"/>
   <h1>Connect to Jira</h1>
-  <p class="sub">Link your Jira workspace once. Your team hits <strong>Refresh</strong> on the dashboard URL to get live data anytime.</p>
+  <p class="sub">Each person connects with their own Jira credentials and sees their own projects and data. Use <strong>⏏ Disconnect</strong> anytime to switch accounts.</p>
 
   {% if connected %}
   <div class="status-banner">
