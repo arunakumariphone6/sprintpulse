@@ -27,23 +27,58 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "jira-intelligence-dashboard-secret-2026-change-me")
 
-# ── In-memory cache ────────────────────────────────────────────
-_cache = {
-    "data":        None,      # processed data dict
-    "raw_issues":  None,      # raw Jira issues list
-    "fetched_at":  None,      # datetime of last fetch
-    "status":      "idle",    # idle | fetching | ready | error
-    "error_msg":   "",
-    "config":      {          # persisted connection config
-        "jira_url":   os.environ.get("JIRA_URL", ""),
-        "email":      os.environ.get("JIRA_EMAIL", ""),
-        "api_token":  os.environ.get("JIRA_API_TOKEN", ""),
-        "projects":   os.environ.get("JIRA_PROJECTS", ""),   # e.g. "P2,VPD,UAMRQ"
-        "max_results": int(os.environ.get("JIRA_MAX_RESULTS", "500")),
-        "api_version": "3",   # "3" = Jira Cloud, "2" = Jira Server/Data Center
-    }
+# ── Per-session in-memory caches ───────────────────────────────
+# Each browser session gets its own isolated Jira connection so
+# multiple colleagues can connect to different projects simultaneously.
+_user_caches: dict = {}          # uid → cache dict
+_user_locks:  dict = {}          # uid → threading.Lock
+_cache_registry_lock = threading.Lock()
+_CACHE_MAX = 200                 # max concurrent sessions in memory
+
+# Default config pre-filled from environment variables (local dev only).
+# On Railway these env vars are intentionally absent so every visitor
+# sees the Connect form and enters their own credentials.
+_env_defaults = {
+    "jira_url":    os.environ.get("JIRA_URL", ""),
+    "email":       os.environ.get("JIRA_EMAIL", ""),
+    "api_token":   os.environ.get("JIRA_API_TOKEN", ""),
+    "projects":    os.environ.get("JIRA_PROJECTS", ""),
+    "max_results": int(os.environ.get("JIRA_MAX_RESULTS", "500")),
+    "api_version": "3",
 }
-_lock = threading.Lock()
+
+
+def _new_cache() -> dict:
+    """Return a fresh cache entry with env-var defaults pre-filled."""
+    return {
+        "data":       None,
+        "raw_issues": None,
+        "fetched_at": None,
+        "status":     "idle",
+        "error_msg":  "",
+        "config":     dict(_env_defaults),
+    }
+
+
+def get_session_cache():
+    """Return (cache_dict, lock) for the current browser session.
+
+    A unique ``uid`` is stored in the signed Flask session cookie so
+    each browser tab/person gets completely isolated Jira data.
+    """
+    if "uid" not in session:
+        session["uid"] = os.urandom(16).hex()
+    uid = session["uid"]
+    with _cache_registry_lock:
+        if uid not in _user_caches:
+            # Evict the oldest entry when the table is full
+            if len(_user_caches) >= _CACHE_MAX:
+                oldest = next(iter(_user_caches))
+                _user_caches.pop(oldest, None)
+                _user_locks.pop(oldest, None)
+            _user_caches[uid] = _new_cache()
+            _user_locks[uid]  = threading.Lock()
+    return _user_caches[uid], _user_locks[uid]
 
 
 # ─────────────────────────────────────────────────────────────
@@ -259,14 +294,19 @@ def normalize_issues(raw_issues):
     return rows
 
 
-def background_fetch(config):
-    """Run in a thread: fetch Jira → process → store in cache."""
-    with _lock:
-        _cache["status"]    = "fetching"
-        _cache["error_msg"] = ""
+def background_fetch(config, cache_key: str):
+    """Run in a thread: fetch Jira → process → store in the session cache."""
+    cache = _user_caches.get(cache_key)
+    lock  = _user_locks.get(cache_key)
+    if cache is None or lock is None:
+        log.warning(f"background_fetch: cache_key {cache_key!r} not found — aborting")
+        return
+
+    with lock:
+        cache["status"]    = "fetching"
+        cache["error_msg"] = ""
 
     try:
-        # Auto-detect API version (Cloud=v3, Server/DC=v2) if not already known
         if not config.get("api_version"):
             config["api_version"] = "3"
         try:
@@ -276,25 +316,25 @@ def background_fetch(config):
         except Exception as ve:
             log.warning(f"API version detection failed, using {config['api_version']}: {ve}")
 
-        log.info(f"Starting Jira fetch (API v{config['api_version']})…")
+        log.info(f"[{cache_key[:8]}] Starting Jira fetch (API v{config['api_version']})…")
         raw = fetch_jira_issues(config)
         rows = normalize_issues(raw)
         data = process_data(rows)
 
-        with _lock:
-            _cache["raw_issues"] = raw
-            _cache["data"]       = data
-            _cache["fetched_at"] = datetime.now()
-            _cache["status"]     = "ready"
-            _cache["config"]     = config
-        log.info(f"Fetch complete — {len(rows)} issues loaded")
+        with lock:
+            cache["raw_issues"] = raw
+            cache["data"]       = data
+            cache["fetched_at"] = datetime.now()
+            cache["status"]     = "ready"
+            cache["config"]     = config
+        log.info(f"[{cache_key[:8]}] Fetch complete — {len(rows)} issues loaded")
 
     except Exception as e:
         msg = str(e)
-        log.error(f"Jira fetch failed: {msg}")
-        with _lock:
-            _cache["status"]    = "error"
-            _cache["error_msg"] = msg
+        log.error(f"[{cache_key[:8]}] Jira fetch failed: {msg}")
+        with lock:
+            cache["status"]    = "error"
+            cache["error_msg"] = msg
 
 
 # ─────────────────────────────────────────────────────────────
@@ -573,21 +613,7 @@ def get_logo_src():
 LOGO_SRC = get_logo_src()
 
 
-def _auto_connect_from_env():
-    """
-    If all Jira credentials are present in .env / environment variables,
-    kick off an initial fetch automatically so the dashboard is ready
-    without any manual interaction.
-    """
-    cfg = _cache["config"]
-    if cfg.get("jira_url") and cfg.get("email") and cfg.get("api_token"):
-        log.info("Auto-connecting from environment / .env credentials…")
-        t = threading.Thread(target=background_fetch, args=(cfg,), daemon=True)
-        t.start()
-    else:
-        log.info("No .env credentials found — manual connection required.")
-
-_auto_connect_from_env()
+log.info("SprintPulse started — multi-user mode (per-session Jira connections)")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -656,6 +682,8 @@ input[type=password]{font-family:'JetBrains Mono',monospace;letter-spacing:2px}
     <br><a href="/dashboard" style="color:#1e6ef5;font-weight:700;text-decoration:none">→ Open Dashboard</a>
     &nbsp;&nbsp;
     <a href="/refresh" style="color:#38a169;font-weight:700;text-decoration:none">↺ Refresh Data</a>
+    &nbsp;&nbsp;
+    <a href="/disconnect" style="color:#e53e3e;font-weight:700;text-decoration:none">⏏ Disconnect</a>
     </div>
   </div>
   {% endif %}
@@ -2122,14 +2150,14 @@ setInterval(piClock, 1000);
 
 @app.route("/", methods=["GET"])
 def index():
-    cfg = _cache["config"]
-    status = _cache["status"]
-    # If auto-connected from .env and data is ready, go straight to the dashboard
-    if status == "ready" and cfg.get("jira_url") and cfg.get("email") and cfg.get("api_token"):
-        return redirect(url_for("dashboard"))
-    connected  = status == "ready"
-    fetched_at = _cache["fetched_at"]
-    total = _cache["data"]["total"] if connected and _cache["data"] else 0
+    cache, lock = get_session_cache()
+    with lock:
+        cfg        = cache["config"]
+        status     = cache["status"]
+        fetched_at = cache["fetched_at"]
+        data       = cache["data"]
+    connected = status == "ready"
+    total = data["total"] if connected and data else 0
     return render_template_string(
         CONNECT_HTML,
         logo_src=LOGO_SRC,
@@ -2151,9 +2179,10 @@ def test_connection():
         api_version = detect_api_version(jira_url, email, api_token)
         data = _jira_get(jira_url, f"/rest/api/{api_version}/myself", email, api_token)
         name = data.get("displayName", data.get("emailAddress","Unknown"))
-        # Persist detected api_version into the cache config so Connect uses it too
-        with _lock:
-            _cache["config"]["api_version"] = api_version
+        # Persist detected api_version into this session's cache config
+        cache, lock = get_session_cache()
+        with lock:
+            cache["config"]["api_version"] = api_version
         ver_label = "Cloud" if api_version == "3" else "Server/DC"
         return jsonify({"ok": True, "message": f"✅ Connected as {name} (Jira {ver_label}). Credentials are valid!"})
     except urllib.error.HTTPError as e:
@@ -2173,7 +2202,6 @@ def connect():
     api_token = request.form.get("api_token","").strip()
     if not all([jira_url, email, api_token]):
         return jsonify({"ok": False, "message": "Jira URL, email and API token are required."})
-    # Auto-detect API version (Cloud=3, Server/DC=2)
     try:
         api_version = detect_api_version(jira_url, email, api_token)
     except urllib.error.HTTPError as e:
@@ -2192,15 +2220,15 @@ def connect():
         "max_results": int(request.form.get("max_results", 500) or 500),
         "api_version": api_version,
     }
-    if not all([config["jira_url"], config["email"], config["api_token"]]):
-        return jsonify({"ok": False, "message": "Jira URL, email and API token are required."})
-    # Start background fetch
-    t = threading.Thread(target=background_fetch, args=(config,), daemon=True)
+    # Ensure session cache exists and capture uid before spawning thread
+    cache, lock = get_session_cache()
+    uid = session["uid"]
+    t = threading.Thread(target=background_fetch, args=(config, uid), daemon=True)
     t.start()
-    t.join(timeout=120)   # wait up to 2 min in foreground for initial load
-    with _lock:
-        status = _cache["status"]
-        err    = _cache["error_msg"]
+    t.join(timeout=120)
+    with lock:
+        status = cache["status"]
+        err    = cache["error_msg"]
     if status == "ready":
         return jsonify({"ok": True, "message": "Connected and data loaded."})
     elif status == "error":
@@ -2209,13 +2237,28 @@ def connect():
         return jsonify({"ok": True, "message": "Fetch in progress — redirecting…"})
 
 
+@app.route("/disconnect")
+def disconnect():
+    """Clear this session's Jira connection so the user can reconnect."""
+    uid = session.pop("uid", None)
+    if uid:
+        with _cache_registry_lock:
+            _user_caches.pop(uid, None)
+            _user_locks.pop(uid, None)
+    return redirect(url_for("index"))
+
+
 @app.route("/refresh")
 def refresh():
-    cfg = _cache["config"]
+    cache, lock = get_session_cache()
+    uid = session["uid"]
+    with lock:
+        cfg    = cache["config"]
+        status = cache["status"]
     if not cfg.get("jira_url") or not cfg.get("email") or not cfg.get("api_token"):
         return redirect(url_for("index"))
-    if _cache["status"] != "fetching":
-        t = threading.Thread(target=background_fetch, args=(cfg,), daemon=True)
+    if status != "fetching":
+        t = threading.Thread(target=background_fetch, args=(cfg, uid), daemon=True)
         t.start()
         t.join(timeout=120)
     return redirect(url_for("dashboard"))
@@ -2223,12 +2266,13 @@ def refresh():
 
 @app.route("/dashboard")
 def dashboard():
-    with _lock:
-        status = _cache["status"]
-        data   = _cache["data"]
-        fetched_at = _cache["fetched_at"]
-        cfg    = _cache["config"]
-        err    = _cache["error_msg"]
+    cache, lock = get_session_cache()
+    with lock:
+        status     = cache["status"]
+        data       = cache["data"]
+        fetched_at = cache["fetched_at"]
+        cfg        = cache["config"]
+        err        = cache["error_msg"]
 
     if status == "fetching":
         return """<html><head><meta http-equiv="refresh" content="3;url=/dashboard">
@@ -2256,12 +2300,13 @@ def dashboard():
 
 @app.route("/people")
 def people():
-    with _lock:
-        status     = _cache["status"]
-        data       = _cache["data"]
-        fetched_at = _cache["fetched_at"]
-        cfg        = _cache["config"]
-        err        = _cache["error_msg"]
+    cache, lock = get_session_cache()
+    with lock:
+        status     = cache["status"]
+        data       = cache["data"]
+        fetched_at = cache["fetched_at"]
+        cfg        = cache["config"]
+        err        = cache["error_msg"]
 
     if status == "fetching":
         return """<html><head><meta http-equiv="refresh" content="3;url=/people">
@@ -2294,12 +2339,13 @@ def people():
 
 @app.route("/status")
 def status_api():
-    with _lock:
+    cache, lock = get_session_cache()
+    with lock:
         return jsonify({
-            "status":     _cache["status"],
-            "fetched_at": _cache["fetched_at"].isoformat() if _cache["fetched_at"] else None,
-            "total":      _cache["data"]["total"] if _cache["data"] else 0,
-            "error":      _cache["error_msg"],
+            "status":     cache["status"],
+            "fetched_at": cache["fetched_at"].isoformat() if cache["fetched_at"] else None,
+            "total":      cache["data"]["total"] if cache["data"] else 0,
+            "error":      cache["error_msg"],
         })
 
 
